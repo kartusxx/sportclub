@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: sportclub-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sportclub}
+      POSTGRES_USER: ${POSTGRES_USER:-sportclub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sportclub}
+    volumes:
+      - sportclub-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: sportclub-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8080
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-sportclub}
+      DB_USERNAME: ${POSTGRES_USER:-sportclub}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-sportclub}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+
+volumes:
+  sportclub-db-data:

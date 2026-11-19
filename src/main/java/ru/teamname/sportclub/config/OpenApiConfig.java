@@ -1,0 +1,20 @@
+package ru.teamname.sportclub.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/** Единая OpenAPI 3 документация всего приложения (Swagger UI: /swagger-ui.html). */
+@Configuration
+public class OpenApiConfig {
+
+    @Bean
+    public OpenAPI sportClubOpenApi() {
+        return new OpenAPI().info(new Info()
+                .title("SportClub API")
+                .version("1.0.0")
+                .description("REST API системы управления спортивным клубом: участники, тренеры, "
+                        + "абонементы, занятия и записи на занятия."));
+    }
+}
