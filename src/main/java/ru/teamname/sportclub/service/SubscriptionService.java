@@ -1,5 +1,6 @@
 package ru.teamname.sportclub.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,22 +24,13 @@ import java.time.LocalDate;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final MemberRepository memberRepository;
     private final MembershipPlanRepository planRepository;
     private final Clock clock;
-
-    public SubscriptionService(SubscriptionRepository subscriptionRepository,
-                               MemberRepository memberRepository,
-                               MembershipPlanRepository planRepository,
-                               Clock clock) {
-        this.subscriptionRepository = subscriptionRepository;
-        this.memberRepository = memberRepository;
-        this.planRepository = planRepository;
-        this.clock = clock;
-    }
 
     public Page<SubscriptionResponse> findAll(Pageable pageable) {
         return subscriptionRepository.findAll(pageable).map(SubscriptionMapper::toResponse);
@@ -66,9 +58,7 @@ public class SubscriptionService {
     public SubscriptionResponse purchase(SubscriptionRequest request) {
         Member member = memberRepository.findByIdForUpdate(request.memberId())
                 .orElseThrow(() -> new ResourceNotFoundException("Участник", request.memberId()));
-        if (member.getStatus() != MemberStatus.ACTIVE) {
-            throw new BusinessRuleException("Нельзя оформить абонемент: статус участника " + member.getStatus());
-        }
+        ensureMemberIsActive(member);
         MembershipPlan plan = planRepository.findById(request.planId())
                 .orElseThrow(() -> new ResourceNotFoundException("Тариф", request.planId()));
 
@@ -76,18 +66,32 @@ public class SubscriptionService {
         subscriptionRepository.expireOutdated(member.getId(), SubscriptionStatus.ACTIVE,
                 SubscriptionStatus.EXPIRED, today);
 
-        LocalDate start = subscriptionRepository.findLatestEndDate(member.getId(), SubscriptionStatus.ACTIVE)
+        LocalDate start = calculateStartDate(member, today);
+        return SubscriptionMapper.toResponse(subscriptionRepository.save(newSubscription(member, plan, start)));
+    }
+
+    private void ensureMemberIsActive(Member member) {
+        if (member.getStatus() != MemberStatus.ACTIVE) {
+            throw new BusinessRuleException("Нельзя оформить абонемент: статус участника " + member.getStatus());
+        }
+    }
+
+    /** Продление начинается на следующий день после действующего абонемента, иначе — сегодня. */
+    private LocalDate calculateStartDate(Member member, LocalDate today) {
+        return subscriptionRepository.findLatestEndDate(member.getId(), SubscriptionStatus.ACTIVE)
                 .filter(latestEnd -> !latestEnd.isBefore(today))
                 .map(latestEnd -> latestEnd.plusDays(1))
                 .orElse(today);
+    }
 
+    private Subscription newSubscription(Member member, MembershipPlan plan, LocalDate start) {
         Subscription subscription = new Subscription();
         subscription.setMember(member);
         subscription.setPlan(plan);
         subscription.setStartDate(start);
         subscription.setEndDate(start.plusDays(plan.getDurationDays() - 1L));
         subscription.setStatus(SubscriptionStatus.ACTIVE);
-        return SubscriptionMapper.toResponse(subscriptionRepository.save(subscription));
+        return subscription;
     }
 
     @Transactional

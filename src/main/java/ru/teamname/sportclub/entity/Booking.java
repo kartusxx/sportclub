@@ -14,6 +14,8 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 import ru.teamname.sportclub.enums.BookingStatus;
 
 import java.time.LocalDateTime;
@@ -22,6 +24,8 @@ import java.time.LocalDateTime;
  * Many to Many с дополнительными полями (bookedAt, status, note):
  * участник может записаться на много занятий, на занятие записывается много участников.
  */
+@Getter
+@Setter
 @Entity
 @Table(
         name = "bookings",
@@ -54,52 +58,4 @@ public class Booking {
     @Size(max = 255)
     @Column(length = 255)
     private String note;
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Member getMember() {
-        return member;
-    }
-
-    public void setMember(Member member) {
-        this.member = member;
-    }
-
-    public TrainingClass getTrainingClass() {
-        return trainingClass;
-    }
-
-    public void setTrainingClass(TrainingClass trainingClass) {
-        this.trainingClass = trainingClass;
-    }
-
-    public LocalDateTime getBookedAt() {
-        return bookedAt;
-    }
-
-    public void setBookedAt(LocalDateTime bookedAt) {
-        this.bookedAt = bookedAt;
-    }
-
-    public BookingStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(BookingStatus status) {
-        this.status = status;
-    }
-
-    public String getNote() {
-        return note;
-    }
-
-    public void setNote(String note) {
-        this.note = note;
-    }
 }

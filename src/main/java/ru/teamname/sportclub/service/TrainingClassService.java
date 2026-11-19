@@ -1,5 +1,6 @@
 package ru.teamname.sportclub.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,22 +21,13 @@ import ru.teamname.sportclub.repository.TrainingClassRepository;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class TrainingClassService {
 
     private final TrainingClassRepository classRepository;
     private final TrainerRepository trainerRepository;
     private final DisciplineRepository disciplineRepository;
     private final BookingRepository bookingRepository;
-
-    public TrainingClassService(TrainingClassRepository classRepository,
-                                TrainerRepository trainerRepository,
-                                DisciplineRepository disciplineRepository,
-                                BookingRepository bookingRepository) {
-        this.classRepository = classRepository;
-        this.trainerRepository = trainerRepository;
-        this.disciplineRepository = disciplineRepository;
-        this.bookingRepository = bookingRepository;
-    }
 
     /** Лента занятий для бесконечной прокрутки: без подсчёта общего количества записей. */
     public SliceResponse<TrainingClassResponse> findFeed(Pageable pageable) {

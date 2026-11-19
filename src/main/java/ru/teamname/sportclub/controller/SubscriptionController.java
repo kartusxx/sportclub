@@ -3,6 +3,7 @@ package ru.teamname.sportclub.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -22,13 +23,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/subscriptions")
 @Tag(name = "Абонементы", description = "Покупка и управление абонементами")
+@RequiredArgsConstructor
 public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
-
-    public SubscriptionController(SubscriptionService subscriptionService) {
-        this.subscriptionService = subscriptionService;
-    }
 
     @GetMapping
     @Operation(summary = "Список абонементов",

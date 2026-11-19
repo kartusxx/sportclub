@@ -3,6 +3,7 @@ package ru.teamname.sportclub.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -23,13 +24,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/plans")
 @Tag(name = "Тарифы", description = "Тарифы абонементов")
+@RequiredArgsConstructor
 public class MembershipPlanController {
 
     private final MembershipPlanService planService;
-
-    public MembershipPlanController(MembershipPlanService planService) {
-        this.planService = planService;
-    }
 
     @GetMapping
     @Operation(summary = "Список тарифов",

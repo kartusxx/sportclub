@@ -3,6 +3,7 @@ package ru.teamname.sportclub.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -26,15 +27,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/classes")
 @Tag(name = "Занятия", description = "Расписание групповых занятий")
+@RequiredArgsConstructor
 public class TrainingClassController {
 
     private final TrainingClassService classService;
     private final BookingService bookingService;
-
-    public TrainingClassController(TrainingClassService classService, BookingService bookingService) {
-        this.classService = classService;
-        this.bookingService = bookingService;
-    }
 
     @GetMapping
     @Operation(summary = "Лента занятий (бесконечная прокрутка)",
