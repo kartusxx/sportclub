@@ -1,5 +1,6 @@
 package ru.teamname.sportclub.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,15 +21,11 @@ import java.util.Set;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class TrainerService {
 
     private final TrainerRepository trainerRepository;
     private final DisciplineRepository disciplineRepository;
-
-    public TrainerService(TrainerRepository trainerRepository, DisciplineRepository disciplineRepository) {
-        this.trainerRepository = trainerRepository;
-        this.disciplineRepository = disciplineRepository;
-    }
 
     public Page<TrainerResponse> findAll(Pageable pageable) {
         return trainerRepository.findAll(pageable).map(TrainerMapper::toResponse);

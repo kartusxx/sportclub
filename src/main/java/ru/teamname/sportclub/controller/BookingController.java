@@ -3,6 +3,7 @@ package ru.teamname.sportclub.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -22,13 +23,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/bookings")
 @Tag(name = "Записи на занятия", description = "Связь участников и занятий (Many to Many с доп. полями)")
+@RequiredArgsConstructor
 public class BookingController {
 
     private final BookingService bookingService;
-
-    public BookingController(BookingService bookingService) {
-        this.bookingService = bookingService;
-    }
 
     @GetMapping
     @Operation(summary = "Список записей",
