@@ -1,5 +1,6 @@
 package ru.teamname.sportclub.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,13 +15,10 @@ import ru.teamname.sportclub.repository.MembershipPlanRepository;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class MembershipPlanService {
 
     private final MembershipPlanRepository planRepository;
-
-    public MembershipPlanService(MembershipPlanRepository planRepository) {
-        this.planRepository = planRepository;
-    }
 
     public Page<MembershipPlanResponse> findAll(Pageable pageable) {
         return planRepository.findAll(pageable).map(MembershipPlanMapper::toResponse);

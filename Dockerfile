@@ -2,9 +2,9 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /workspace
 
-# Сначала зависимости — слой кэшируется, пока не изменился pom.xml
+# Сначала зависимости приложения — слой кэшируется, пока не изменился pom.xml
 COPY pom.xml .
-RUN mvn -B -q dependency:go-offline
+RUN mvn -B -q dependency:resolve -DincludeScope=test
 
 COPY src ./src
 RUN mvn -B -q -DskipTests package

@@ -1,5 +1,6 @@
 package ru.teamname.sportclub.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class BookingService {
 
     private final BookingRepository bookingRepository;
@@ -34,18 +36,6 @@ public class BookingService {
     private final TrainingClassRepository classRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final Clock clock;
-
-    public BookingService(BookingRepository bookingRepository,
-                          MemberRepository memberRepository,
-                          TrainingClassRepository classRepository,
-                          SubscriptionRepository subscriptionRepository,
-                          Clock clock) {
-        this.bookingRepository = bookingRepository;
-        this.memberRepository = memberRepository;
-        this.classRepository = classRepository;
-        this.subscriptionRepository = subscriptionRepository;
-        this.clock = clock;
-    }
 
     public Page<BookingResponse> findAll(Pageable pageable) {
         return bookingRepository.findAll(pageable).map(BookingMapper::toResponse);
@@ -73,30 +63,12 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Занятие", request.classId()));
         Member member = memberRepository.findById(request.memberId())
                 .orElseThrow(() -> new ResourceNotFoundException("Участник", request.memberId()));
-
         LocalDateTime now = LocalDateTime.now(clock);
-        if (!trainingClass.getStartsAt().isAfter(now)) {
-            throw new BusinessRuleException("Занятие уже началось или прошло, запись невозможна");
-        }
-        if (member.getStatus() != MemberStatus.ACTIVE) {
-            throw new BusinessRuleException("Запись невозможна: статус участника " + member.getStatus());
-        }
-        long coveringSubscriptions = subscriptionRepository.countCovering(
-                member.getId(), SubscriptionStatus.ACTIVE, trainingClass.getStartsAt().toLocalDate());
-        if (coveringSubscriptions == 0) {
-            throw new BusinessRuleException("У участника нет действующего абонемента на дату занятия");
-        }
 
-        Optional<Booking> existing = bookingRepository
-                .findByMemberIdAndTrainingClassId(member.getId(), trainingClass.getId());
-        if (existing.isPresent() && existing.get().getStatus() != BookingStatus.CANCELLED) {
-            throw new ConflictException("Участник уже записан на это занятие");
-        }
-
-        long booked = bookingRepository.countByTrainingClassIdAndStatus(trainingClass.getId(), BookingStatus.BOOKED);
-        if (booked >= trainingClass.getCapacity()) {
-            throw new ConflictException("На занятии нет свободных мест");
-        }
+        ensureClassNotStarted(trainingClass, now);
+        ensureMemberCanBook(member, trainingClass);
+        Optional<Booking> existing = findReusableBooking(member, trainingClass);
+        ensureFreePlaces(trainingClass);
 
         // Отменённую запись переиспользуем: пара (участник, занятие) уникальна
         Booking booking = existing.orElseGet(Booking::new);
@@ -106,6 +78,41 @@ public class BookingService {
         booking.setStatus(BookingStatus.BOOKED);
         booking.setNote(request.note());
         return BookingMapper.toResponse(bookingRepository.save(booking));
+    }
+
+    private void ensureClassNotStarted(TrainingClass trainingClass, LocalDateTime now) {
+        if (!trainingClass.getStartsAt().isAfter(now)) {
+            throw new BusinessRuleException("Занятие уже началось или прошло, запись невозможна");
+        }
+    }
+
+    /** Участник должен быть активным и иметь абонемент, действующий на дату занятия. */
+    private void ensureMemberCanBook(Member member, TrainingClass trainingClass) {
+        if (member.getStatus() != MemberStatus.ACTIVE) {
+            throw new BusinessRuleException("Запись невозможна: статус участника " + member.getStatus());
+        }
+        long coveringSubscriptions = subscriptionRepository.countCovering(
+                member.getId(), SubscriptionStatus.ACTIVE, trainingClass.getStartsAt().toLocalDate());
+        if (coveringSubscriptions == 0) {
+            throw new BusinessRuleException("У участника нет действующего абонемента на дату занятия");
+        }
+    }
+
+    /** Возвращает прежнюю запись, если она была отменена; если запись активна — это дубликат (409). */
+    private Optional<Booking> findReusableBooking(Member member, TrainingClass trainingClass) {
+        Optional<Booking> existing = bookingRepository
+                .findByMemberIdAndTrainingClassId(member.getId(), trainingClass.getId());
+        if (existing.isPresent() && existing.get().getStatus() != BookingStatus.CANCELLED) {
+            throw new ConflictException("Участник уже записан на это занятие");
+        }
+        return existing;
+    }
+
+    private void ensureFreePlaces(TrainingClass trainingClass) {
+        long booked = bookingRepository.countByTrainingClassIdAndStatus(trainingClass.getId(), BookingStatus.BOOKED);
+        if (booked >= trainingClass.getCapacity()) {
+            throw new ConflictException("На занятии нет свободных мест");
+        }
     }
 
     @Transactional

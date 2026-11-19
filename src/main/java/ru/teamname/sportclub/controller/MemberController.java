@@ -3,6 +3,7 @@ package ru.teamname.sportclub.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -25,15 +26,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/members")
 @Tag(name = "Участники", description = "Управление участниками клуба")
+@RequiredArgsConstructor
 public class MemberController {
 
     private final MemberService memberService;
     private final SubscriptionService subscriptionService;
-
-    public MemberController(MemberService memberService, SubscriptionService subscriptionService) {
-        this.memberService = memberService;
-        this.subscriptionService = subscriptionService;
-    }
 
     @GetMapping
     @Operation(summary = "Список участников",

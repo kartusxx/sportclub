@@ -3,6 +3,7 @@ package ru.teamname.sportclub.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -23,13 +24,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/trainers")
 @Tag(name = "Тренеры", description = "Тренеры и их направления (Many to Many)")
+@RequiredArgsConstructor
 public class TrainerController {
 
     private final TrainerService trainerService;
-
-    public TrainerController(TrainerService trainerService) {
-        this.trainerService = trainerService;
-    }
 
     @GetMapping
     @Operation(summary = "Список тренеров",
