@@ -39,6 +39,8 @@ public abstract class AbstractIntegrationTest {
     /** Версия образа, имя БД, пользователь и пароль лежат в src/test/resources/test-database.properties. */
     private static final Properties DATABASE = loadDatabaseProperties();
 
+    /** Контейнер живёт до конца прогона тестов; останавливает его Testcontainers (Ryuk), поэтому close() не нужен. */
+    @SuppressWarnings("resource")
     static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(DATABASE.getProperty("test.postgres.image"))
             .withDatabaseName(DATABASE.getProperty("test.postgres.database"))
             .withUsername(DATABASE.getProperty("test.postgres.username"))

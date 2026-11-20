@@ -39,6 +39,6 @@ public final class Responses {
     }
 
     public static ResponseEntity<Void> noContent() {
-        return ResponseEntity.<Void>noContent().build();
+        return ResponseEntity.noContent().build();
     }
 }
