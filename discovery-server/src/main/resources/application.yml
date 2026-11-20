@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: discovery-server
+
+server:
+  port: ${SERVER_PORT:8761}
+
+eureka:
+  instance:
+    hostname: ${EUREKA_HOSTNAME:localhost}
+  client:
+    # одиночный сервер: не регистрируется сам в себе и не тянет реестр у «соседей»
+    register-with-eureka: false
+    fetch-registry: false
+  server:
+    # для разработки: упавший сервис исчезает из реестра быстро (удобно показывать Circuit Breaker)
+    enable-self-preservation: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
