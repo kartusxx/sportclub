@@ -25,6 +25,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -67,10 +68,9 @@ class SubscriptionServiceTest {
         plan.setName("Monthly");
         plan.setDurationDays(30);
 
-        when(memberRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(member));
+        when(memberRepository.findForUpdateById(1L)).thenReturn(Optional.of(member));
         when(memberRepository.existsById(1L)).thenReturn(true);
         when(planRepository.findById(2L)).thenReturn(Optional.of(plan));
-        when(subscriptionRepository.findLatestEndDate(1L, SubscriptionStatus.ACTIVE)).thenReturn(Optional.empty());
         when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -86,6 +86,16 @@ class SubscriptionServiceTest {
         return subscription;
     }
 
+    private Subscription activeEndingOn(LocalDate endDate) {
+        Subscription subscription = new Subscription();
+        subscription.setMember(member);
+        subscription.setPlan(plan);
+        subscription.setStartDate(endDate.minusDays(29));
+        subscription.setEndDate(endDate);
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        return subscription;
+    }
+
     @Test
     void purchaseStartsTodayWhenMemberHasNoActiveSubscription() {
         SubscriptionResponse response = service.purchase(new SubscriptionRequest(1L, 2L));
@@ -94,13 +104,24 @@ class SubscriptionServiceTest {
         assertThat(response.endDate()).isEqualTo(TODAY.plusDays(29));
         assertThat(response.status()).isEqualTo(SubscriptionStatus.ACTIVE);
         assertThat(response.planName()).isEqualTo("Monthly");
-        verify(subscriptionRepository).expireOutdated(1L, SubscriptionStatus.ACTIVE, SubscriptionStatus.EXPIRED, TODAY);
+    }
+
+    @Test
+    void purchaseMarksOutdatedSubscriptionsAsExpired() {
+        Subscription outdated = activeEndingOn(TODAY.minusDays(1));
+        when(subscriptionRepository.findByMemberIdAndStatusAndEndDateBefore(1L, SubscriptionStatus.ACTIVE, TODAY))
+                .thenReturn(List.of(outdated));
+
+        service.purchase(new SubscriptionRequest(1L, 2L));
+
+        assertThat(outdated.getStatus()).isEqualTo(SubscriptionStatus.EXPIRED);
+        verify(subscriptionRepository).saveAll(List.of(outdated));
     }
 
     @Test
     void purchaseExtendsAfterCurrentActiveSubscription() {
-        when(subscriptionRepository.findLatestEndDate(1L, SubscriptionStatus.ACTIVE))
-                .thenReturn(Optional.of(TODAY.plusDays(10)));
+        when(subscriptionRepository.findFirstByMemberIdAndStatusOrderByEndDateDesc(1L, SubscriptionStatus.ACTIVE))
+                .thenReturn(Optional.of(activeEndingOn(TODAY.plusDays(10))));
 
         SubscriptionResponse response = service.purchase(new SubscriptionRequest(1L, 2L));
 
@@ -110,8 +131,8 @@ class SubscriptionServiceTest {
 
     @Test
     void purchaseIgnoresLatestEndDateInThePast() {
-        when(subscriptionRepository.findLatestEndDate(1L, SubscriptionStatus.ACTIVE))
-                .thenReturn(Optional.of(TODAY.minusDays(3)));
+        when(subscriptionRepository.findFirstByMemberIdAndStatusOrderByEndDateDesc(1L, SubscriptionStatus.ACTIVE))
+                .thenReturn(Optional.of(activeEndingOn(TODAY.minusDays(3))));
 
         SubscriptionResponse response = service.purchase(new SubscriptionRequest(1L, 2L));
 
@@ -182,14 +203,16 @@ class SubscriptionServiceTest {
 
     @Test
     void hasCoverageIsTrueWhenActiveSubscriptionCoversDate() {
-        when(subscriptionRepository.countCovering(1L, SubscriptionStatus.ACTIVE, TODAY)).thenReturn(1L);
+        when(subscriptionRepository.existsByMemberIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                1L, SubscriptionStatus.ACTIVE, TODAY, TODAY)).thenReturn(true);
 
         assertThat(service.hasCoverage(1L, TODAY)).isTrue();
     }
 
     @Test
     void hasCoverageIsFalseWhenNothingCoversDate() {
-        when(subscriptionRepository.countCovering(1L, SubscriptionStatus.ACTIVE, TODAY)).thenReturn(0L);
+        when(subscriptionRepository.existsByMemberIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                1L, SubscriptionStatus.ACTIVE, TODAY, TODAY)).thenReturn(false);
 
         assertThat(service.hasCoverage(1L, TODAY)).isFalse();
     }

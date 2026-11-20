@@ -34,7 +34,7 @@ class DisciplineServiceTest {
 
     @Test
     void createSavesDisciplineWhenNameIsFree() {
-        when(repository.countByName("Йога")).thenReturn(Mono.just(0L));
+        when(repository.countByNameIgnoreCase("Йога")).thenReturn(Mono.just(0L));
         when(repository.save(any(Discipline.class))).thenAnswer(call -> {
             Discipline saved = call.getArgument(0);
             saved.setId(10L);
@@ -51,7 +51,7 @@ class DisciplineServiceTest {
 
     @Test
     void createFailsWhenNameIsTaken() {
-        when(repository.countByName("Йога")).thenReturn(Mono.just(1L));
+        when(repository.countByNameIgnoreCase("Йога")).thenReturn(Mono.just(1L));
 
         StepVerifier.create(service.create(new DisciplineRequest("Йога", null)))
                 .expectError(ConflictException.class)
@@ -62,7 +62,7 @@ class DisciplineServiceTest {
     @Test
     void updateChecksNameAgainstOtherDisciplines() {
         when(repository.findById(1L)).thenReturn(Mono.just(discipline(1, "Йога")));
-        when(repository.countByNameExcludingId("Пилатес", 1L)).thenReturn(Mono.just(1L));
+        when(repository.countByNameIgnoreCaseAndIdNot("Пилатес", 1L)).thenReturn(Mono.just(1L));
 
         StepVerifier.create(service.update(1L, new DisciplineRequest("Пилатес", null)))
                 .expectError(ConflictException.class)
@@ -72,7 +72,7 @@ class DisciplineServiceTest {
     @Test
     void updateSavesNewValues() {
         when(repository.findById(1L)).thenReturn(Mono.just(discipline(1, "Йога")));
-        when(repository.countByNameExcludingId("Пилатес", 1L)).thenReturn(Mono.just(0L));
+        when(repository.countByNameIgnoreCaseAndIdNot("Пилатес", 1L)).thenReturn(Mono.just(0L));
         when(repository.save(any(Discipline.class))).thenAnswer(call -> Mono.just(call.getArgument(0)));
 
         StepVerifier.create(service.update(1L, new DisciplineRequest("Пилатес", "Новое")))

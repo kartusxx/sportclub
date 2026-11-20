@@ -37,8 +37,8 @@ public class BookingController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Получить запись по id")
-    public BookingResponse findById(@PathVariable Long id) {
-        return bookingService.findById(id);
+    public ResponseEntity<BookingResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.findById(id));
     }
 
     @PostMapping
@@ -51,14 +51,14 @@ public class BookingController {
 
     @PostMapping("/{id}/cancel")
     @Operation(summary = "Отменить запись")
-    public BookingResponse cancel(@PathVariable Long id) {
-        return bookingService.cancel(id);
+    public ResponseEntity<BookingResponse> cancel(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.cancel(id));
     }
 
     @PostMapping("/{id}/attend")
     @Operation(summary = "Отметить посещение занятия")
-    public BookingResponse attend(@PathVariable Long id) {
-        return bookingService.markAttended(id);
+    public ResponseEntity<BookingResponse> attend(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.markAttended(id));
     }
 
     @DeleteMapping("/{id}")

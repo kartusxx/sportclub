@@ -14,6 +14,7 @@ class ClassLockTest {
     private final JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
 
     @Test
+    @SuppressWarnings("unchecked")
     void takesAdvisoryTransactionLockByClassId() {
         new ClassLock(jdbcTemplate).acquire(42L);
 

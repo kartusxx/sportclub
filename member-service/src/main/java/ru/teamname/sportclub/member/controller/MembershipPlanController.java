@@ -50,8 +50,9 @@ public class MembershipPlanController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Получить тариф по id")
-    public Mono<MembershipPlanResponse> findById(@PathVariable Long id) {
-        return Blocking.call(() -> planService.findById(id));
+    public Mono<ResponseEntity<MembershipPlanResponse>> findById(@PathVariable Long id) {
+        return Blocking.call(() -> planService.findById(id))
+                .map(Responses::ok);
     }
 
     @PostMapping
@@ -64,9 +65,10 @@ public class MembershipPlanController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Обновить тариф")
-    public Mono<MembershipPlanResponse> update(@PathVariable Long id,
+    public Mono<ResponseEntity<MembershipPlanResponse>> update(@PathVariable Long id,
                                                @Valid @RequestBody MembershipPlanRequest request) {
-        return Blocking.call(() -> planService.update(id, request));
+        return Blocking.call(() -> planService.update(id, request))
+                .map(Responses::ok);
     }
 
     @DeleteMapping("/{id}")

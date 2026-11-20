@@ -94,8 +94,8 @@ public class TrainerService {
 
     private Mono<Void> ensureEmailIsFree(String email, Long excludedId) {
         Mono<Long> count = excludedId == null
-                ? trainerRepository.countByEmail(email)
-                : trainerRepository.countByEmailExcludingId(email, excludedId);
+                ? trainerRepository.countByEmailIgnoreCase(email)
+                : trainerRepository.countByEmailIgnoreCaseAndIdNot(email, excludedId);
         return count.filter(found -> found > 0)
                 .flatMap(found -> Mono.<Void>error(
                         new ConflictException("Тренер с email " + email + " уже существует")));

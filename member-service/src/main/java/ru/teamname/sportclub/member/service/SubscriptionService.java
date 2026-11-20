@@ -21,6 +21,7 @@ import ru.teamname.sportclub.member.repository.SubscriptionRepository;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
@@ -48,7 +49,8 @@ public class SubscriptionService {
         if (!memberRepository.existsById(memberId)) {
             throw new ResourceNotFoundException("Участник", memberId);
         }
-        return subscriptionRepository.countCovering(memberId, SubscriptionStatus.ACTIVE, date) > 0;
+        return subscriptionRepository.existsByMemberIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                memberId, SubscriptionStatus.ACTIVE, date, date);
     }
 
     public SubscriptionResponse findById(Long id) {
@@ -64,18 +66,25 @@ public class SubscriptionService {
      */
     @Transactional
     public SubscriptionResponse purchase(SubscriptionRequest request) {
-        Member member = memberRepository.findByIdForUpdate(request.memberId())
+        Member member = memberRepository.findForUpdateById(request.memberId())
                 .orElseThrow(() -> new ResourceNotFoundException("Участник", request.memberId()));
         ensureMemberIsActive(member);
         MembershipPlan plan = planRepository.findById(request.planId())
                 .orElseThrow(() -> new ResourceNotFoundException("Тариф", request.planId()));
 
         LocalDate today = LocalDate.now(clock);
-        subscriptionRepository.expireOutdated(member.getId(), SubscriptionStatus.ACTIVE,
-                SubscriptionStatus.EXPIRED, today);
+        expireOutdated(member, today);
 
         LocalDate start = calculateStartDate(member, today);
         return SubscriptionMapper.toResponse(subscriptionRepository.save(newSubscription(member, plan, start)));
+    }
+
+    /** Переводит просроченные абонементы участника в EXPIRED (изменения сохраняются вместе с транзакцией). */
+    private void expireOutdated(Member member, LocalDate today) {
+        List<Subscription> outdated = subscriptionRepository.findByMemberIdAndStatusAndEndDateBefore(
+                member.getId(), SubscriptionStatus.ACTIVE, today);
+        outdated.forEach(subscription -> subscription.setStatus(SubscriptionStatus.EXPIRED));
+        subscriptionRepository.saveAll(outdated);
     }
 
     private void ensureMemberIsActive(Member member) {
@@ -86,7 +95,9 @@ public class SubscriptionService {
 
     /** Продление начинается на следующий день после действующего абонемента, иначе — сегодня. */
     private LocalDate calculateStartDate(Member member, LocalDate today) {
-        return subscriptionRepository.findLatestEndDate(member.getId(), SubscriptionStatus.ACTIVE)
+        return subscriptionRepository.findFirstByMemberIdAndStatusOrderByEndDateDesc(member.getId(),
+                        SubscriptionStatus.ACTIVE)
+                .map(Subscription::getEndDate)
                 .filter(latestEnd -> !latestEnd.isBefore(today))
                 .map(latestEnd -> latestEnd.plusDays(1))
                 .orElse(today);

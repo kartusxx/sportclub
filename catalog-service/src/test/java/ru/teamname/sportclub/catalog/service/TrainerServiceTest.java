@@ -68,7 +68,7 @@ class TrainerServiceTest {
 
     @Test
     void createSavesTrainerAndReplacesDisciplineLinks() {
-        when(trainers.countByEmail("anna@example.com")).thenReturn(Mono.just(0L));
+        when(trainers.countByEmailIgnoreCase("anna@example.com")).thenReturn(Mono.just(0L));
         when(disciplines.findAllById(anyIterable()))
                 .thenReturn(Flux.just(discipline(1, "Йога"), discipline(2, "Бокс")));
         saveAssignsId(7L);
@@ -87,7 +87,7 @@ class TrainerServiceTest {
 
     @Test
     void createWithoutDisciplinesSkipsLookup() {
-        when(trainers.countByEmail("anna@example.com")).thenReturn(Mono.just(0L));
+        when(trainers.countByEmailIgnoreCase("anna@example.com")).thenReturn(Mono.just(0L));
         saveAssignsId(7L);
         when(links.replace(eq(7L), any())).thenReturn(Mono.empty());
 
@@ -100,7 +100,7 @@ class TrainerServiceTest {
 
     @Test
     void createFailsWhenEmailIsTaken() {
-        when(trainers.countByEmail("anna@example.com")).thenReturn(Mono.just(1L));
+        when(trainers.countByEmailIgnoreCase("anna@example.com")).thenReturn(Mono.just(1L));
 
         StepVerifier.create(service.create(request("anna@example.com", Set.of())))
                 .expectError(ConflictException.class)
@@ -110,7 +110,7 @@ class TrainerServiceTest {
 
     @Test
     void createFailsWhenDisciplineDoesNotExist() {
-        when(trainers.countByEmail("anna@example.com")).thenReturn(Mono.just(0L));
+        when(trainers.countByEmailIgnoreCase("anna@example.com")).thenReturn(Mono.just(0L));
         when(disciplines.findAllById(anyIterable())).thenReturn(Flux.just(discipline(1, "Йога")));
 
         StepVerifier.create(service.create(request("anna@example.com", Set.of(1L, 99L))))
@@ -124,7 +124,7 @@ class TrainerServiceTest {
     @Test
     void updateIgnoresOwnEmailAndRewritesLinks() {
         when(trainers.findById(7L)).thenReturn(Mono.just(trainer(7)));
-        when(trainers.countByEmailExcludingId("anna@example.com", 7L)).thenReturn(Mono.just(0L));
+        when(trainers.countByEmailIgnoreCaseAndIdNot("anna@example.com", 7L)).thenReturn(Mono.just(0L));
         when(trainers.save(any(Trainer.class))).thenAnswer(call -> Mono.just(call.getArgument(0)));
         when(links.replace(eq(7L), any())).thenReturn(Mono.empty());
 
@@ -138,7 +138,7 @@ class TrainerServiceTest {
     @Test
     void updateFailsWhenEmailBelongsToAnotherTrainer() {
         when(trainers.findById(7L)).thenReturn(Mono.just(trainer(7)));
-        when(trainers.countByEmailExcludingId("busy@example.com", 7L)).thenReturn(Mono.just(1L));
+        when(trainers.countByEmailIgnoreCaseAndIdNot("busy@example.com", 7L)).thenReturn(Mono.just(1L));
 
         StepVerifier.create(service.update(7L, request("busy@example.com", Set.of())))
                 .expectError(ConflictException.class)

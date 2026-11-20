@@ -54,8 +54,8 @@ public class DisciplineService {
 
     private Mono<Void> ensureNameIsFree(String name, Long excludedId) {
         Mono<Long> count = excludedId == null
-                ? disciplineRepository.countByName(name)
-                : disciplineRepository.countByNameExcludingId(name, excludedId);
+                ? disciplineRepository.countByNameIgnoreCase(name)
+                : disciplineRepository.countByNameIgnoreCaseAndIdNot(name, excludedId);
         return count.filter(found -> found > 0)
                 .flatMap(found -> Mono.<Void>error(
                         new ConflictException("Направление '" + name + "' уже существует")));

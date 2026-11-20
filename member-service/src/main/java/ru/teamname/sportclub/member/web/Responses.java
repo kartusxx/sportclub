@@ -33,7 +33,12 @@ public final class Responses {
         return ResponseEntity.created(location).body(body);
     }
 
+    /** 200 OK с телом ответа. */
+    public static <T> ResponseEntity<T> ok(T body) {
+        return ResponseEntity.ok(body);
+    }
+
     public static ResponseEntity<Void> noContent() {
-        return ResponseEntity.<Void>noContent().build();
+        return ResponseEntity.noContent().build();
     }
 }
