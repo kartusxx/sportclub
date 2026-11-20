@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: config-server
+  profiles:
+    active: native
+  cloud:
+    config:
+      server:
+        native:
+          # локально (mvn spring-boot:run в каталоге модуля) — ../config-repo; в Docker задаётся переменной среды
+          search-locations: ${CONFIG_REPO_PATH:file:../config-repo}
+
+server:
+  port: ${SERVER_PORT:8888}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
