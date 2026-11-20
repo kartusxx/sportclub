@@ -3,3 +3,14 @@ server:
 
 info:
   service: member-service
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/member_db}
+    username: ${DB_USERNAME:member}
+    password: ${DB_PASSWORD:member}
+  jpa:
+    hibernate:
+      ddl-auto: validate   # схемой владеет Flyway, Hibernate только проверяет
+  flyway:
+    enabled: true
