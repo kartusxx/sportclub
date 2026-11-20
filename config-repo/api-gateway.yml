@@ -3,3 +3,80 @@ server:
 
 info:
   service: api-gateway
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway   # /actuator/gateway/routes — список загруженных маршрутов (для отладки)
+
+eureka:
+  client:
+    registry-fetch-interval-seconds: 5   # быстрее узнавать о новых и упавших экземплярах
+
+spring:
+  cloud:
+    loadbalancer:
+      cache:
+        ttl: 5s                          # кэш экземпляров балансировщика (по умолчанию 35 с)
+    gateway:
+      server:
+        webflux:
+          # Меньший order — выше приоритет. Маршруты без order имеют order 0.
+          routes:
+            # --- Исключение: записи занятия принадлежат booking-service, а не catalog-service.
+            #     Должен идти раньше /api/classes/** (order -1 < 0).
+            - id: class-bookings
+              uri: lb://booking-service
+              order: -1
+              predicates:
+                - Path=/api/classes/*/bookings/**
+
+            - id: member-service
+              uri: lb://member-service
+              predicates:
+                - Path=/api/members/**, /api/plans/**, /api/subscriptions/**
+
+            - id: catalog-service
+              uri: lb://catalog-service
+              predicates:
+                - Path=/api/trainers/**, /api/disciplines/**, /api/classes/**
+
+            - id: booking-service
+              uri: lb://booking-service
+              predicates:
+                - Path=/api/bookings/**
+
+            # --- Документация сервисов для общего Swagger UI: /member-service/v3/api-docs -> /v3/api-docs
+            - id: member-service-docs
+              uri: lb://member-service
+              predicates:
+                - Path=/member-service/v3/api-docs
+              filters:
+                - RewritePath=/member-service/(?<path>.*), /$\{path}
+            - id: catalog-service-docs
+              uri: lb://catalog-service
+              predicates:
+                - Path=/catalog-service/v3/api-docs
+              filters:
+                - RewritePath=/catalog-service/(?<path>.*), /$\{path}
+            - id: booking-service-docs
+              uri: lb://booking-service
+              predicates:
+                - Path=/booking-service/v3/api-docs
+              filters:
+                - RewritePath=/booking-service/(?<path>.*), /$\{path}
+
+          # /internal/** маршрутов не имеет, поэтому gateway отвечает на него 404.
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: member-service
+        url: /member-service/v3/api-docs
+      - name: catalog-service
+        url: /catalog-service/v3/api-docs
+      - name: booking-service
+        url: /booking-service/v3/api-docs
+    urls-primary-name: member-service
