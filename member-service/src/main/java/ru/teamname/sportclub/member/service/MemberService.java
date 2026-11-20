@@ -4,7 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import ru.teamname.sportclub.member.client.BookingGateway;
 import ru.teamname.sportclub.member.dto.MemberRequest;
 import ru.teamname.sportclub.member.dto.MemberResponse;
 import ru.teamname.sportclub.member.entity.Member;
@@ -19,6 +21,7 @@ import ru.teamname.sportclub.member.repository.MemberRepository;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final BookingGateway bookingGateway;
 
     public Page<MemberResponse> findAll(Pageable pageable) {
         return memberRepository.findAll(pageable).map(MemberMapper::toResponse);
@@ -47,11 +50,21 @@ public class MemberService {
         return MemberMapper.toResponse(memberRepository.saveAndFlush(member));
     }
 
-    @Transactional
+    /**
+     * Участника с записями на занятия удалять нельзя. Записи лежат в БД booking-service, поэтому внешнего
+     * ключа нет, и проверка выполняется вызовом по сети. Он идёт вне транзакции (NOT_SUPPORTED): сетевой
+     * вызов не должен держать соединение с БД. Это проверка перед действием, и между проверкой и удалением
+     * запись может появиться (итоговая согласованность вместо ограничения БД).
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void delete(Long id) {
-        Member member = getOrThrow(id);
-        memberRepository.delete(member);
-        memberRepository.flush();
+        if (!memberRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Участник", id);
+        }
+        if (bookingGateway.hasBookings(id)) {
+            throw new ConflictException("Нельзя удалить участника: у него есть записи на занятия");
+        }
+        memberRepository.deleteById(id);
     }
 
     private Member getOrThrow(Long id) {
