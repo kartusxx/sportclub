@@ -1,0 +1,12 @@
+# Публикует порты микросервисов напрямую (только на localhost) — для отладки до появления gateway.
+# Запуск: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+services:
+  member-service:
+    ports:
+      - "127.0.0.1:8082:8080"
+  catalog-service:
+    ports:
+      - "127.0.0.1:8083:8080"
+  booking-service:
+    ports:
+      - "127.0.0.1:8084:8080"
