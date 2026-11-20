@@ -7,7 +7,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 /** HTTP-клиент booking-service (обратная зависимость catalog → booking). Блокирующий. */
-@FeignClient(name = "booking-service", contextId = "bookingClient")
+@FeignClient(name = "booking-service", contextId = "bookingClient",
+        fallbackFactory = BookingClientFallbackFactory.class)
 public interface BookingClient {
 
     @GetMapping("/internal/bookings/class/{classId}/booked-count")
