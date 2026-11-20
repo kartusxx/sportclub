@@ -14,11 +14,6 @@
     <name>sportclub-api-gateway</name>
     <description>API Gateway (Spring Cloud Gateway)</description>
 
-    <properties>
-        <!-- Заготовка без кода: проверку покрытия включим, когда появится логика -->
-        <jacoco.skip>true</jacoco.skip>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
