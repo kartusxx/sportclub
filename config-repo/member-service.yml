@@ -1,3 +1,4 @@
+# Настройки member-service
 server:
   port: ${SERVER_PORT:8080}
 
@@ -10,7 +11,11 @@ spring:
     username: ${DB_USERNAME:member}
     password: ${DB_PASSWORD:member}
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate   # схемой владеет Flyway, Hibernate только проверяет
+    properties:
+      hibernate:
+        default_batch_fetch_size: 50
   flyway:
     enabled: true

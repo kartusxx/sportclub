@@ -1,3 +1,4 @@
+# Настройки booking-service
 server:
   port: ${SERVER_PORT:8080}
 
@@ -10,8 +11,13 @@ spring:
     username: ${DB_USERNAME:booking}
     password: ${DB_PASSWORD:booking}
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
-    open-in-view: false
   flyway:
     enabled: true
+  data:
+    web:
+      pageable:
+        default-page-size: 20
+        max-page-size: 50   # нельзя отдавать больше 50 записей за запрос
