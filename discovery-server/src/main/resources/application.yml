@@ -15,6 +15,9 @@ eureka:
   server:
     # для разработки: упавший сервис исчезает из реестра быстро (удобно показывать Circuit Breaker)
     enable-self-preservation: false
+    # без кэша ответов: новые регистрации видны сразу, а не через 30 с (иначе сервисы не находят друг друга после старта)
+    use-read-only-response-cache: false
+    response-cache-update-interval-ms: 3000
 
 management:
   endpoints:
