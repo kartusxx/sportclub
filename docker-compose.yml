@@ -1,55 +1,40 @@
+# Весь стенд: docker compose up --build
+# Наружу опубликованы только gateway (8081) и Eureka (8761, для демонстрации).
+# Остальные сервисы и все БД доступны только во внутренней сети compose.
+# Порты для отладки: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# Настройки берутся из переменных окружения / файла .env (шаблон: .env.example).
+
 x-postgres: &postgres
   image: postgres:17-alpine
+  restart: unless-stopped
   healthcheck:
     test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
     interval: 5s
     timeout: 5s
     retries: 10
 
+# Общие переменные клиентов Config Server / Eureka
 x-client-env: &client-env
   CONFIG_URL: http://config-server:8888
   EUREKA_URL: http://discovery-server:8761/eureka/
 
+# Клиенты стартуют после config-server и discovery-server
 x-client-depends: &client-depends
   config-server:
     condition: service_healthy
   discovery-server:
     condition: service_healthy
 
+# Проверка здоровья через Actuator (в образе есть wget из busybox)
+x-healthcheck: &healthcheck
+  test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+  interval: 10s
+  timeout: 5s
+  retries: 12
+  start_period: 40s
+
 services:
-  db:
-    image: postgres:17-alpine
-    container_name: sportclub-db
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-sportclub}
-      POSTGRES_USER: ${POSTGRES_USER:-sportclub}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sportclub}
-    volumes:
-      - sportclub-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  app:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      args:
-        MODULE: monolith
-    container_name: sportclub-app
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      SERVER_PORT: 8080
-      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-sportclub}
-      DB_USERNAME: ${POSTGRES_USER:-sportclub}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-sportclub}
-    ports:
-      - "${APP_PORT:-8080}:8080"
-
+  # ---------- базы данных (по одной на сервис) ----------
   member-db:
     <<: *postgres
     container_name: sportclub-member-db
@@ -59,8 +44,6 @@ services:
       POSTGRES_PASSWORD: ${MEMBER_DB_PASSWORD:-member}
     volumes:
       - member-db-data:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5433:5432"
 
   catalog-db:
     <<: *postgres
@@ -71,8 +54,6 @@ services:
       POSTGRES_PASSWORD: ${CATALOG_DB_PASSWORD:-catalog}
     volumes:
       - catalog-db-data:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5434:5432"
 
   booking-db:
     <<: *postgres
@@ -83,9 +64,8 @@ services:
       POSTGRES_PASSWORD: ${BOOKING_DB_PASSWORD:-booking}
     volumes:
       - booking-db-data:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5435:5432"
 
+  # ---------- инфраструктура ----------
   config-server:
     build:
       context: .
@@ -93,13 +73,12 @@ services:
       args:
         MODULE: config-server
     container_name: sportclub-config-server
+    restart: unless-stopped
     environment:
       SERVER_PORT: 8888
       CONFIG_REPO_PATH: file:/config-repo
     volumes:
       - ./config-repo:/config-repo:ro
-    ports:
-      - "8888:8888"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8888/actuator/health | grep -q UP"]
       interval: 10s
@@ -114,10 +93,11 @@ services:
       args:
         MODULE: discovery-server
     container_name: sportclub-discovery-server
+    restart: unless-stopped
     environment:
       SERVER_PORT: 8761
     ports:
-      - "8761:8761"
+      - "${EUREKA_PORT:-8761}:8761"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q UP"]
       interval: 10s
@@ -125,6 +105,7 @@ services:
       retries: 12
       start_period: 30s
 
+  # ---------- бизнес-сервисы ----------
   member-service:
     build:
       context: .
@@ -132,6 +113,7 @@ services:
       args:
         MODULE: member-service
     container_name: sportclub-member-service
+    restart: unless-stopped
     environment:
       <<: *client-env
       DB_URL: jdbc:postgresql://member-db:5432/member_db
@@ -141,6 +123,7 @@ services:
       <<: *client-depends
       member-db:
         condition: service_healthy
+    healthcheck: *healthcheck
 
   catalog-service:
     build:
@@ -149,16 +132,18 @@ services:
       args:
         MODULE: catalog-service
     container_name: sportclub-catalog-service
+    restart: unless-stopped
     environment:
       <<: *client-env
       R2DBC_URL: r2dbc:postgresql://catalog-db:5432/catalog_db
-      DB_URL: jdbc:postgresql://catalog-db:5432/catalog_db
+      DB_URL: jdbc:postgresql://catalog-db:5432/catalog_db   # JDBC нужен только Flyway
       DB_USERNAME: catalog
       DB_PASSWORD: ${CATALOG_DB_PASSWORD:-catalog}
     depends_on:
       <<: *client-depends
       catalog-db:
         condition: service_healthy
+    healthcheck: *healthcheck
 
   booking-service:
     build:
@@ -167,6 +152,7 @@ services:
       args:
         MODULE: booking-service
     container_name: sportclub-booking-service
+    restart: unless-stopped
     environment:
       <<: *client-env
       DB_URL: jdbc:postgresql://booking-db:5432/booking_db
@@ -176,7 +162,9 @@ services:
       <<: *client-depends
       booking-db:
         condition: service_healthy
+    healthcheck: *healthcheck
 
+  # ---------- точка входа ----------
   api-gateway:
     build:
       context: .
@@ -184,13 +172,21 @@ services:
       args:
         MODULE: api-gateway
     container_name: sportclub-api-gateway
+    restart: unless-stopped
     environment: *client-env
-    depends_on: *client-depends
+    depends_on:
+      <<: *client-depends
+      member-service:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+      booking-service:
+        condition: service_healthy
     ports:
       - "${GATEWAY_PORT:-8081}:8080"
+    healthcheck: *healthcheck
 
 volumes:
-  sportclub-db-data:
   member-db-data:
   catalog-db-data:
   booking-db-data:
