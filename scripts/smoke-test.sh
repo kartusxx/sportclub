@@ -19,6 +19,18 @@ req() {
   BODY="${out%$'\n'*}"
 }
 
+# Как req, но при 503 повторяет запрос (до ~90 с): сразу после старта стенда сервисы ещё не нашли друг друга
+# в Eureka или цепь Circuit Breaker разомкнута. Другие коды возвращаются сразу.
+reqr() {
+  local attempt
+  for attempt in $(seq 1 30); do
+    req "$@"
+    [ "$CODE" != "503" ] && return
+    [ "$attempt" -eq 1 ] && echo "  ... получен 503, ждём готовности сервисов"
+    sleep 3
+  done
+}
+
 check() { # описание, ожидаемый код
   if [ "$CODE" = "$2" ]; then echo "  ok   $1 ($CODE)"; else echo "  FAIL $1: ожидался $2, получен $CODE"; echo "       $BODY" | head -c 300; echo; FAILED=1; fi
 }
@@ -47,28 +59,28 @@ req POST /api/classes "{\"title\":\"Smoke class\",\"trainerId\":$TRAINER,\"disci
 check "создание занятия" 201; CLASS=$(id_of)
 
 echo "Запись на занятие (Feign: booking → member, booking → catalog)"
-req POST /api/bookings "{\"memberId\":$MEMBER,\"classId\":$CLASS}"
+reqr POST /api/bookings "{\"memberId\":$MEMBER,\"classId\":$CLASS}"
 check "запись" 201; BOOKING=$(id_of)
-req POST /api/bookings "{\"memberId\":$MEMBER,\"classId\":$CLASS}"
+reqr POST /api/bookings "{\"memberId\":$MEMBER,\"classId\":$CLASS}"
 check "повторная запись отклонена" 409
-req POST /api/bookings "{\"memberId\":999999,\"classId\":$CLASS}"
+reqr POST /api/bookings "{\"memberId\":999999,\"classId\":$CLASS}"
 check "несуществующий участник" 404
-req GET "/api/classes/$CLASS/bookings"
+reqr GET "/api/classes/$CLASS/bookings"
 check "GET /api/classes/{id}/bookings (маршрут в booking-service)" 200
 
 echo "Обратные вызовы (member/catalog → booking)"
-req DELETE "/api/members/$MEMBER"
+reqr DELETE "/api/members/$MEMBER"
 check "удаление участника с записью запрещено" 409
-req PUT "/api/classes/$CLASS" "{\"title\":\"Smoke class\",\"trainerId\":$TRAINER,\"disciplineId\":$DISC,\"room\":\"A1\",\"startsAt\":\"$CLASS_START\",\"durationMinutes\":60,\"capacity\":15,\"level\":\"BEGINNER\"}"
+reqr PUT "/api/classes/$CLASS" "{\"title\":\"Smoke class\",\"trainerId\":$TRAINER,\"disciplineId\":$DISC,\"room\":\"A1\",\"startsAt\":\"$CLASS_START\",\"durationMinutes\":60,\"capacity\":15,\"level\":\"BEGINNER\"}"
 check "увеличение вместимости разрешено" 200
 
 echo "Очистка"
-req DELETE "/api/classes/$CLASS";   check "удаление занятия" 204
+reqr DELETE "/api/classes/$CLASS";   check "удаление занятия" 204
 req DELETE "/api/bookings/$BOOKING"; echo "  (запись могла быть удалена вместе с занятием: код $CODE)"
 # У участника остался абонемент (внешний ключ в БД member-service), поэтому сначала удаляем его
-req DELETE "/api/members/$MEMBER"; check "участник с абонементом не удаляется (ограничение БД)" 409
+reqr DELETE "/api/members/$MEMBER"; check "участник с абонементом не удаляется (ограничение БД)" 409
 req DELETE "/api/subscriptions/$SUB"; check "удаление абонемента" 204
-req DELETE "/api/members/$MEMBER";  check "удаление участника без записей и абонементов" 204
+reqr DELETE "/api/members/$MEMBER";  check "удаление участника без записей и абонементов" 204
 
 HDR=$(curl -si "$GW/api/members" | grep -i '^x-request-id' || true)
 [ -n "$HDR" ] && echo "  ok   X-Request-Id: ${HDR#*: }" || { echo "  FAIL нет заголовка X-Request-Id"; FAILED=1; }
