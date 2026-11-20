@@ -1,0 +1,78 @@
+package ru.teamname.sportclub.member.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.Size;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
+import ru.teamname.sportclub.member.enums.MemberStatus;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+@Entity
+@Table(name = "members")
+public class Member {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotBlank
+    @Size(max = 100)
+    @Column(name = "first_name", nullable = false, length = 100)
+    private String firstName;
+
+    @NotBlank
+    @Size(max = 100)
+    @Column(name = "last_name", nullable = false, length = 100)
+    private String lastName;
+
+    @NotBlank
+    @Email
+    @Size(max = 255)
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Size(max = 32)
+    @Column(length = 32)
+    private String phone;
+
+    @Past
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private MemberStatus status = MemberStatus.ACTIVE;
+
+    @Setter(AccessLevel.NONE)
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
+
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
+}
