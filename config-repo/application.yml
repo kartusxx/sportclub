@@ -1,17 +1,10 @@
-# Общие настройки для ВСЕХ клиентов Config Server.
-# ${...} подставляются на стороне клиента из его переменных среды.
-eureka:
-  client:
-    service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
-  instance:
-    prefer-ip-address: true
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  info:
-    env:
-      enabled: true
+# Общие настройки для всех сервисов (Config Server отдаёт этот файл каждому клиенту)
+spring:
+  cloud:
+    openfeign:
+      client:
+        config:
+          default:
+            connectTimeout: 2000   # мс на установку соединения
+            readTimeout: 5000      # мс на ожидание ответа
+            loggerLevel: basic

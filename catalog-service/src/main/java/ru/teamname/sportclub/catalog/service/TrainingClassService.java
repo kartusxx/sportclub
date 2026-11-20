@@ -3,12 +3,14 @@ package ru.teamname.sportclub.catalog.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import ru.teamname.sportclub.catalog.client.BookingGateway;
 import ru.teamname.sportclub.catalog.dto.SliceResponse;
 import ru.teamname.sportclub.catalog.dto.TrainingClassRequest;
 import ru.teamname.sportclub.catalog.dto.TrainingClassResponse;
 import ru.teamname.sportclub.catalog.entity.Discipline;
 import ru.teamname.sportclub.catalog.entity.Trainer;
 import ru.teamname.sportclub.catalog.entity.TrainingClass;
+import ru.teamname.sportclub.catalog.exception.ConflictException;
 import ru.teamname.sportclub.catalog.exception.ResourceNotFoundException;
 import ru.teamname.sportclub.catalog.mapper.TrainingClassMapper;
 import ru.teamname.sportclub.catalog.repository.DisciplineRepository;
@@ -32,6 +34,7 @@ public class TrainingClassService {
     private final DisciplineRepository disciplineRepository;
     private final PagedReader pagedReader;
     private final EntityValidator validator;
+    private final BookingGateway bookingGateway;
 
     /** Лента занятий для бесконечной прокрутки: без подсчёта общего количества записей. */
     public Mono<SliceResponse<TrainingClassResponse>> findFeed(PageQuery query) {
@@ -58,13 +61,15 @@ public class TrainingClassService {
     }
 
     /**
-     * TODO(шаг 5): раньше здесь проверялось, что новая вместимость не меньше числа записанных участников.
-     * Записи теперь хранит booking-service, поэтому проверка появится вместе с Feign-клиентом.
+     * Вместимость нельзя уменьшить ниже числа уже записанных участников. Записи хранит booking-service,
+     * поэтому число запрашивается по сети и только если вместимость уменьшается.
+     * Проверка и сохранение не атомарны: запись, пришедшая между ними, может превысить новую вместимость
+     * (допущение eventual consistency, описано в README).
      */
     public Mono<TrainingClassResponse> update(Long id, TrainingClassRequest request) {
         return getOrThrow(id)
-                .flatMap(trainingClass -> Mono.zip(getTrainer(request.trainerId()),
-                                getDiscipline(request.disciplineId()))
+                .flatMap(trainingClass -> checkCapacity(trainingClass, request)
+                        .then(Mono.zip(getTrainer(request.trainerId()), getDiscipline(request.disciplineId())))
                         .flatMap(refs -> {
                             TrainingClassMapper.apply(request, trainingClass);
                             return save(trainingClass)
@@ -74,11 +79,25 @@ public class TrainingClassService {
     }
 
     /**
-     * TODO(шаг 5): раньше вместе с занятием в одной транзакции удалялись его записи. Теперь записи лежат
-     * в другой БД, и их очистка будет вызываться у booking-service через Feign.
+     * Сначала удаляется занятие, затем (best-effort) его записи в booking-service. Обратный порядок
+     * опаснее: при сбое удаления занятия записи уже потеряны. Осиротевшие записи не видны пользователям.
      */
     public Mono<Void> delete(Long id) {
-        return getOrThrow(id).flatMap(classRepository::delete);
+        return getOrThrow(id)
+                .flatMap(trainingClass -> classRepository.delete(trainingClass)
+                        .then(bookingGateway.deleteBookings(id)));
+    }
+
+    private Mono<Void> checkCapacity(TrainingClass current, TrainingClassRequest request) {
+        if (request.capacity() >= current.getCapacity()) {
+            return Mono.empty();
+        }
+        return bookingGateway.bookedCount(current.getId())
+                .flatMap(booked -> booked > request.capacity()
+                        ? Mono.<Void>error(new ConflictException(
+                                "Нельзя уменьшить вместимость до " + request.capacity()
+                                        + ": на занятие уже записано " + booked))
+                        : Mono.<Void>empty());
     }
 
     /** Подтягивает имена тренеров и направлений двумя запросами на всю пачку занятий (без N+1). */

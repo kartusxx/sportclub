@@ -43,6 +43,14 @@ public class SubscriptionService {
         return subscriptionRepository.findByMemberId(memberId, pageable).map(SubscriptionMapper::toResponse);
     }
 
+    /** Есть ли у участника действующий абонемент, покрывающий дату. Для booking-service (внутренний API). */
+    public boolean hasCoverage(Long memberId, LocalDate date) {
+        if (!memberRepository.existsById(memberId)) {
+            throw new ResourceNotFoundException("Участник", memberId);
+        }
+        return subscriptionRepository.countCovering(memberId, SubscriptionStatus.ACTIVE, date) > 0;
+    }
+
     public SubscriptionResponse findById(Long id) {
         return SubscriptionMapper.toResponse(getOrThrow(id));
     }
