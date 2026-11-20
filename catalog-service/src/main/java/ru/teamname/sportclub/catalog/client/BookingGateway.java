@@ -38,7 +38,7 @@ public class BookingGateway {
     public Mono<Void> deleteBookings(Long classId) {
         return Mono.<Void>fromRunnable(() -> bookingClient.deleteByClass(classId))
                 .subscribeOn(Schedulers.boundedElastic())
-                .onErrorResume(FeignException.class, e -> {
+                .onErrorResume(e -> {
                     log.warn("booking-service: записи занятия {} не удалены, останутся осиротевшими: {}",
                             classId, e.getMessage());
                     return Mono.empty();

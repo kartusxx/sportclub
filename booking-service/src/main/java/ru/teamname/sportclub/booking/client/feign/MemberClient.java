@@ -6,7 +6,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /** HTTP-клиент member-service. Адрес берётся из Eureka по имени сервиса. */
-@FeignClient(name = "member-service", contextId = "memberClient")
+@FeignClient(name = "member-service", contextId = "memberClient",
+        fallbackFactory = MemberClientFallbackFactory.class)
 public interface MemberClient {
 
     @GetMapping("/internal/members/{id}")
