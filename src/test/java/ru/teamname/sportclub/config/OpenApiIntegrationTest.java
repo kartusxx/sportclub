@@ -22,4 +22,15 @@ class OpenApiIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.paths['/api/classes']").exists())
                 .andExpect(jsonPath("$.paths['/api/bookings']").exists());
     }
+
+    @Test
+    void pageableIsExposedAsSeparateQueryParameters() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/subscriptions'].get.parameters[?(@.name == 'page')]").exists())
+                .andExpect(jsonPath("$.paths['/api/subscriptions'].get.parameters[?(@.name == 'size')]").exists())
+                .andExpect(jsonPath("$.paths['/api/subscriptions'].get.parameters[?(@.name == 'sort')]").exists())
+                .andExpect(jsonPath("$.paths['/api/subscriptions'].get.parameters[?(@.name == 'pageable')]")
+                        .doesNotExist());
+    }
 }

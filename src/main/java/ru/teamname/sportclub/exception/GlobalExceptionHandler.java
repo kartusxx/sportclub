@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -88,6 +89,21 @@ public class GlobalExceptionHandler {
                                                               HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST,
                 "Сортировка по полю '" + ex.getPropertyName() + "' невозможна", request, List.of());
+    }
+
+    /**
+     * Некорректное выражение сортировки (например, {@code sort=["string"]} из Swagger UI) Spring Data
+     * отклоняет ещё до разбора свойств. Это ошибка клиента, а не сервера.
+     */
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    public ResponseEntity<ApiError> handleInvalidApiUsage(InvalidDataAccessApiUsageException ex,
+                                                          HttpServletRequest request) {
+        if (ex.getMessage() != null && ex.getMessage().startsWith("Sort expression")) {
+            return build(HttpStatus.BAD_REQUEST,
+                    "Некорректный параметр сортировки. Используйте формат sort=поле,asc|desc (например, sort=id,desc)",
+                    request, List.of());
+        }
+        return handleUnexpected(ex, request);
     }
 
     @ExceptionHandler(Exception.class)

@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +34,7 @@ public class MembershipPlanController {
     @Operation(summary = "Список тарифов",
             description = "Пагинация (максимум 50 записей на страницу). Общее количество — в заголовке X-Total-Count")
     public ResponseEntity<List<MembershipPlanResponse>> findAll(
-            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+            @ParameterObject @PageableDefault(size = 20, sort = "id") Pageable pageable) {
         return Responses.page(planService.findAll(pageable));
     }
 

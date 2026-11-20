@@ -3,6 +3,7 @@ package ru.teamname.sportclub.exception;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -77,6 +78,22 @@ class GlobalExceptionHandlerTest {
                 new ErrorResponseException(HttpStatus.METHOD_NOT_ALLOWED), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @Test
+    void invalidSortExpressionMapsTo400() {
+        ResponseEntity<ApiError> response = handler.handleInvalidApiUsage(new InvalidDataAccessApiUsageException(
+                "Sort expression '[\"string\"]: ASC' must only contain property references"), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void otherInvalidApiUsageStillMapsTo500() {
+        ResponseEntity<ApiError> response = handler.handleInvalidApiUsage(
+                new InvalidDataAccessApiUsageException("something else"), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test

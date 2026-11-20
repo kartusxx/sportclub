@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -31,7 +32,7 @@ public class BookingController {
     @GetMapping
     @Operation(summary = "Список записей",
             description = "Пагинация (максимум 50 записей на страницу). Общее количество — в заголовке X-Total-Count")
-    public ResponseEntity<List<BookingResponse>> findAll(@PageableDefault(size = 20, sort = "id") Pageable pageable) {
+    public ResponseEntity<List<BookingResponse>> findAll(@ParameterObject @PageableDefault(size = 20, sort = "id") Pageable pageable) {
         return Responses.page(bookingService.findAll(pageable));
     }
 

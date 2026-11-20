@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -38,7 +39,7 @@ public class TrainingClassController {
             description = "Максимум 50 записей на страницу. Общее количество не считается: "
                     + "клиент ориентируется по полю hasNext")
     public SliceResponse<TrainingClassResponse> findFeed(
-            @PageableDefault(size = 20, sort = "startsAt") Pageable pageable) {
+            @ParameterObject @PageableDefault(size = 20, sort = "startsAt") Pageable pageable) {
         return classService.findFeed(pageable);
     }
 
@@ -51,7 +52,7 @@ public class TrainingClassController {
     @GetMapping("/{id}/bookings")
     @Operation(summary = "Записи на занятие (One to Many)")
     public ResponseEntity<List<BookingResponse>> findBookings(
-            @PathVariable Long id, @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+            @PathVariable Long id, @ParameterObject @PageableDefault(size = 20, sort = "id") Pageable pageable) {
         return Responses.page(bookingService.findByClass(id, pageable));
     }
 
