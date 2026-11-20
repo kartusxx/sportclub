@@ -42,8 +42,8 @@ public class MemberController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Получить участника по id")
-    public MemberResponse findById(@PathVariable Long id) {
-        return memberService.findById(id);
+    public ResponseEntity<MemberResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(memberService.findById(id));
     }
 
     @GetMapping("/{id}/subscriptions")
@@ -62,8 +62,9 @@ public class MemberController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Обновить участника")
-    public MemberResponse update(@PathVariable Long id, @Valid @RequestBody MemberRequest request) {
-        return memberService.update(id, request);
+    public ResponseEntity<MemberResponse> update(@PathVariable Long id,
+            @Valid @RequestBody MemberRequest request) {
+        return ResponseEntity.ok(memberService.update(id, request));
     }
 
     @DeleteMapping("/{id}")

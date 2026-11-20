@@ -56,15 +56,14 @@ public class SubscriptionService {
      */
     @Transactional
     public SubscriptionResponse purchase(SubscriptionRequest request) {
-        Member member = memberRepository.findByIdForUpdate(request.memberId())
+        Member member = memberRepository.findLockedById(request.memberId())
                 .orElseThrow(() -> new ResourceNotFoundException("Участник", request.memberId()));
         ensureMemberIsActive(member);
         MembershipPlan plan = planRepository.findById(request.planId())
                 .orElseThrow(() -> new ResourceNotFoundException("Тариф", request.planId()));
 
         LocalDate today = LocalDate.now(clock);
-        subscriptionRepository.expireOutdated(member.getId(), SubscriptionStatus.ACTIVE,
-                SubscriptionStatus.EXPIRED, today);
+        expireOutdated(member, today);
 
         LocalDate start = calculateStartDate(member, today);
         return SubscriptionMapper.toResponse(subscriptionRepository.save(newSubscription(member, plan, start)));
@@ -76,9 +75,17 @@ public class SubscriptionService {
         }
     }
 
+    /** Переводит закончившиеся абонементы участника в EXPIRED (изменения сохранит Hibernate при flush). */
+    private void expireOutdated(Member member, LocalDate today) {
+        subscriptionRepository.findByMemberIdAndStatusAndEndDateBefore(member.getId(), SubscriptionStatus.ACTIVE, today)
+                .forEach(subscription -> subscription.setStatus(SubscriptionStatus.EXPIRED));
+    }
+
     /** Продление начинается на следующий день после действующего абонемента, иначе — сегодня. */
     private LocalDate calculateStartDate(Member member, LocalDate today) {
-        return subscriptionRepository.findLatestEndDate(member.getId(), SubscriptionStatus.ACTIVE)
+        return subscriptionRepository
+                .findFirstByMemberIdAndStatusOrderByEndDateDesc(member.getId(), SubscriptionStatus.ACTIVE)
+                .map(Subscription::getEndDate)
                 .filter(latestEnd -> !latestEnd.isBefore(today))
                 .map(latestEnd -> latestEnd.plusDays(1))
                 .orElse(today);

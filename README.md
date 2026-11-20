@@ -31,6 +31,7 @@ docker compose up --build
 ```
 
 Нужен запущенный Docker (интеграционные тесты поднимают PostgreSQL через Testcontainers).
+Образ PostgreSQL, имя тестовой базы, логин и пароль задаются в `src/test/resources/application-test.properties`.
 JaCoCo проверяет покрытие строк: сборка падает, если оно ниже 70 %. Отчёт — `target/site/jacoco/index.html`.
 
 ## Модель данных

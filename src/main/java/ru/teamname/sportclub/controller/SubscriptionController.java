@@ -39,8 +39,8 @@ public class SubscriptionController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Получить абонемент по id")
-    public SubscriptionResponse findById(@PathVariable Long id) {
-        return subscriptionService.findById(id);
+    public ResponseEntity<SubscriptionResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(subscriptionService.findById(id));
     }
 
     @PostMapping
@@ -53,8 +53,8 @@ public class SubscriptionController {
 
     @PostMapping("/{id}/cancel")
     @Operation(summary = "Отменить действующий абонемент")
-    public SubscriptionResponse cancel(@PathVariable Long id) {
-        return subscriptionService.cancel(id);
+    public ResponseEntity<SubscriptionResponse> cancel(@PathVariable Long id) {
+        return ResponseEntity.ok(subscriptionService.cancel(id));
     }
 
     @DeleteMapping("/{id}")

@@ -40,8 +40,8 @@ public class DisciplineController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Получить направление по id")
-    public DisciplineResponse findById(@PathVariable Long id) {
-        return disciplineService.findById(id);
+    public ResponseEntity<DisciplineResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(disciplineService.findById(id));
     }
 
     @PostMapping
@@ -53,8 +53,9 @@ public class DisciplineController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Обновить направление")
-    public DisciplineResponse update(@PathVariable Long id, @Valid @RequestBody DisciplineRequest request) {
-        return disciplineService.update(id, request);
+    public ResponseEntity<DisciplineResponse> update(@PathVariable Long id,
+            @Valid @RequestBody DisciplineRequest request) {
+        return ResponseEntity.ok(disciplineService.update(id, request));
     }
 
     @DeleteMapping("/{id}")

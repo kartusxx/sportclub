@@ -25,6 +25,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -67,11 +68,24 @@ class SubscriptionServiceTest {
         plan.setName("Monthly");
         plan.setDurationDays(30);
 
-        when(memberRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(member));
+        when(memberRepository.findLockedById(1L)).thenReturn(Optional.of(member));
         when(memberRepository.existsById(1L)).thenReturn(true);
         when(planRepository.findById(2L)).thenReturn(Optional.of(plan));
-        when(subscriptionRepository.findLatestEndDate(1L, SubscriptionStatus.ACTIVE)).thenReturn(Optional.empty());
+        when(subscriptionRepository.findFirstByMemberIdAndStatusOrderByEndDateDesc(1L, SubscriptionStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+        when(subscriptionRepository.findByMemberIdAndStatusAndEndDateBefore(1L, SubscriptionStatus.ACTIVE, TODAY))
+                .thenReturn(List.of());
         when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    }
+
+    private Subscription subscriptionEndingOn(LocalDate endDate) {
+        Subscription subscription = new Subscription();
+        subscription.setMember(member);
+        subscription.setPlan(plan);
+        subscription.setStartDate(endDate.minusDays(29));
+        subscription.setEndDate(endDate);
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        return subscription;
     }
 
     private Subscription subscription(SubscriptionStatus status) {
@@ -94,13 +108,12 @@ class SubscriptionServiceTest {
         assertThat(response.endDate()).isEqualTo(TODAY.plusDays(29));
         assertThat(response.status()).isEqualTo(SubscriptionStatus.ACTIVE);
         assertThat(response.planName()).isEqualTo("Monthly");
-        verify(subscriptionRepository).expireOutdated(1L, SubscriptionStatus.ACTIVE, SubscriptionStatus.EXPIRED, TODAY);
     }
 
     @Test
     void purchaseExtendsAfterCurrentActiveSubscription() {
-        when(subscriptionRepository.findLatestEndDate(1L, SubscriptionStatus.ACTIVE))
-                .thenReturn(Optional.of(TODAY.plusDays(10)));
+        when(subscriptionRepository.findFirstByMemberIdAndStatusOrderByEndDateDesc(1L, SubscriptionStatus.ACTIVE))
+                .thenReturn(Optional.of(subscriptionEndingOn(TODAY.plusDays(10))));
 
         SubscriptionResponse response = service.purchase(new SubscriptionRequest(1L, 2L));
 
@@ -110,12 +123,23 @@ class SubscriptionServiceTest {
 
     @Test
     void purchaseIgnoresLatestEndDateInThePast() {
-        when(subscriptionRepository.findLatestEndDate(1L, SubscriptionStatus.ACTIVE))
-                .thenReturn(Optional.of(TODAY.minusDays(3)));
+        when(subscriptionRepository.findFirstByMemberIdAndStatusOrderByEndDateDesc(1L, SubscriptionStatus.ACTIVE))
+                .thenReturn(Optional.of(subscriptionEndingOn(TODAY.minusDays(3))));
 
         SubscriptionResponse response = service.purchase(new SubscriptionRequest(1L, 2L));
 
         assertThat(response.startDate()).isEqualTo(TODAY);
+    }
+
+    @Test
+    void purchaseExpiresOutdatedActiveSubscriptions() {
+        Subscription outdated = subscriptionEndingOn(TODAY.minusDays(1));
+        when(subscriptionRepository.findByMemberIdAndStatusAndEndDateBefore(1L, SubscriptionStatus.ACTIVE, TODAY))
+                .thenReturn(List.of(outdated));
+
+        service.purchase(new SubscriptionRequest(1L, 2L));
+
+        assertThat(outdated.getStatus()).isEqualTo(SubscriptionStatus.EXPIRED);
     }
 
     @Test

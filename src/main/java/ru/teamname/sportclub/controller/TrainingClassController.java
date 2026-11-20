@@ -38,15 +38,15 @@ public class TrainingClassController {
     @Operation(summary = "Лента занятий (бесконечная прокрутка)",
             description = "Максимум 50 записей на страницу. Общее количество не считается: "
                     + "клиент ориентируется по полю hasNext")
-    public SliceResponse<TrainingClassResponse> findFeed(
+    public ResponseEntity<SliceResponse<TrainingClassResponse>> findFeed(
             @ParameterObject @PageableDefault(size = 20, sort = "startsAt") Pageable pageable) {
-        return classService.findFeed(pageable);
+        return ResponseEntity.ok(classService.findFeed(pageable));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Получить занятие по id")
-    public TrainingClassResponse findById(@PathVariable Long id) {
-        return classService.findById(id);
+    public ResponseEntity<TrainingClassResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(classService.findById(id));
     }
 
     @GetMapping("/{id}/bookings")
@@ -65,8 +65,9 @@ public class TrainingClassController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Обновить занятие")
-    public TrainingClassResponse update(@PathVariable Long id, @Valid @RequestBody TrainingClassRequest request) {
-        return classService.update(id, request);
+    public ResponseEntity<TrainingClassResponse> update(@PathVariable Long id,
+            @Valid @RequestBody TrainingClassRequest request) {
+        return ResponseEntity.ok(classService.update(id, request));
     }
 
     @DeleteMapping("/{id}")

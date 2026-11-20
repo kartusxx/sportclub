@@ -40,8 +40,8 @@ public class MembershipPlanController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Получить тариф по id")
-    public MembershipPlanResponse findById(@PathVariable Long id) {
-        return planService.findById(id);
+    public ResponseEntity<MembershipPlanResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(planService.findById(id));
     }
 
     @PostMapping
@@ -53,8 +53,9 @@ public class MembershipPlanController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Обновить тариф")
-    public MembershipPlanResponse update(@PathVariable Long id, @Valid @RequestBody MembershipPlanRequest request) {
-        return planService.update(id, request);
+    public ResponseEntity<MembershipPlanResponse> update(@PathVariable Long id,
+            @Valid @RequestBody MembershipPlanRequest request) {
+        return ResponseEntity.ok(planService.update(id, request));
     }
 
     @DeleteMapping("/{id}")

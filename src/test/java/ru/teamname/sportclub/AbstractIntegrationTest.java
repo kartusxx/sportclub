@@ -4,7 +4,10 @@ import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -12,8 +15,11 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
@@ -25,21 +31,49 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Базовый класс интеграционных тестов: один общий контейнер PostgreSQL (Testcontainers)
  * на весь прогон тестов и набор помощников для создания тестовых данных через REST API.
  * Тесты используют уникальные данные, поэтому не мешают друг другу.
+ * Образ, имя базы, логин и пароль берутся из src/test/resources/application-test.properties (профиль "test").
  */
 @SpringBootTest
+@ActiveProfiles("test")
 public abstract class AbstractIntegrationTest {
 
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17-alpine");
+    private static final String TEST_CONFIG = "application-test.properties";
+
+    static final PostgreSQLContainer POSTGRES = createPostgresContainer();
 
     static {
         POSTGRES.start();
     }
 
+    /** Контейнер создаётся до запуска Spring-контекста, поэтому настройки читаются из файла напрямую. */
+    private static PostgreSQLContainer createPostgresContainer() {
+        Properties config = loadTestConfig();
+        return new PostgreSQLContainer(required(config, "test.postgres.image"))
+                .withDatabaseName(required(config, "test.postgres.database"))
+                .withUsername(required(config, "spring.datasource.username"))
+                .withPassword(required(config, "spring.datasource.password"));
+    }
+
+    private static Properties loadTestConfig() {
+        try {
+            return PropertiesLoaderUtils.loadProperties(new ClassPathResource(TEST_CONFIG));
+        } catch (IOException e) {
+            throw new UncheckedIOException("Не удалось прочитать " + TEST_CONFIG, e);
+        }
+    }
+
+    private static String required(Properties config, String key) {
+        String value = config.getProperty(key);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("В " + TEST_CONFIG + " не задано свойство " + key);
+        }
+        return value.trim();
+    }
+
+    /** Порт контейнера случайный, поэтому URL известен только после его запуска. */
     @DynamicPropertySource
     static void datasourceProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
     }
 
     @Autowired

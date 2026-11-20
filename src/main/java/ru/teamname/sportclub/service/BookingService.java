@@ -23,6 +23,7 @@ import ru.teamname.sportclub.repository.SubscriptionRepository;
 import ru.teamname.sportclub.repository.TrainingClassRepository;
 
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -59,7 +60,7 @@ public class BookingService {
      */
     @Transactional
     public BookingResponse book(BookingRequest request) {
-        TrainingClass trainingClass = classRepository.findByIdForUpdate(request.classId())
+        TrainingClass trainingClass = classRepository.findLockedById(request.classId())
                 .orElseThrow(() -> new ResourceNotFoundException("Занятие", request.classId()));
         Member member = memberRepository.findById(request.memberId())
                 .orElseThrow(() -> new ResourceNotFoundException("Участник", request.memberId()));
@@ -91,9 +92,11 @@ public class BookingService {
         if (member.getStatus() != MemberStatus.ACTIVE) {
             throw new BusinessRuleException("Запись невозможна: статус участника " + member.getStatus());
         }
-        long coveringSubscriptions = subscriptionRepository.countCovering(
-                member.getId(), SubscriptionStatus.ACTIVE, trainingClass.getStartsAt().toLocalDate());
-        if (coveringSubscriptions == 0) {
+        LocalDate classDate = trainingClass.getStartsAt().toLocalDate();
+        boolean hasCoveringSubscription = subscriptionRepository
+                .existsByMemberIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                        member.getId(), SubscriptionStatus.ACTIVE, classDate, classDate);
+        if (!hasCoveringSubscription) {
             throw new BusinessRuleException("У участника нет действующего абонемента на дату занятия");
         }
     }

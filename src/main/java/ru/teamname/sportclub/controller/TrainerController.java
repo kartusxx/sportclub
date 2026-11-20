@@ -39,8 +39,8 @@ public class TrainerController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Получить тренера по id")
-    public TrainerResponse findById(@PathVariable Long id) {
-        return trainerService.findById(id);
+    public ResponseEntity<TrainerResponse> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(trainerService.findById(id));
     }
 
     @PostMapping
@@ -52,8 +52,9 @@ public class TrainerController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Обновить тренера и список его направлений")
-    public TrainerResponse update(@PathVariable Long id, @Valid @RequestBody TrainerRequest request) {
-        return trainerService.update(id, request);
+    public ResponseEntity<TrainerResponse> update(@PathVariable Long id,
+            @Valid @RequestBody TrainerRequest request) {
+        return ResponseEntity.ok(trainerService.update(id, request));
     }
 
     @DeleteMapping("/{id}")

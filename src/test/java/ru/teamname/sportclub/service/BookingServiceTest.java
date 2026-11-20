@@ -74,11 +74,12 @@ class BookingServiceTest {
         trainingClass.setCapacity(2);
         trainingClass.setStartsAt(NOW.plusDays(1));
 
-        when(classRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(trainingClass));
+        when(classRepository.findLockedById(10L)).thenReturn(Optional.of(trainingClass));
         when(classRepository.existsById(10L)).thenReturn(true);
         when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
-        when(subscriptionRepository.countCovering(1L, SubscriptionStatus.ACTIVE, NOW.plusDays(1).toLocalDate()))
-                .thenReturn(1L);
+        when(subscriptionRepository.existsByMemberIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                1L, SubscriptionStatus.ACTIVE, NOW.plusDays(1).toLocalDate(), NOW.plusDays(1).toLocalDate()))
+                .thenReturn(true);
         when(bookingRepository.findByMemberIdAndTrainingClassId(1L, 10L)).thenReturn(Optional.empty());
         when(bookingRepository.countByTrainingClassIdAndStatus(10L, BookingStatus.BOOKED)).thenReturn(0L);
         when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -137,8 +138,9 @@ class BookingServiceTest {
 
     @Test
     void bookFailsWithoutActiveSubscription() {
-        when(subscriptionRepository.countCovering(1L, SubscriptionStatus.ACTIVE, NOW.plusDays(1).toLocalDate()))
-                .thenReturn(0L);
+        when(subscriptionRepository.existsByMemberIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                1L, SubscriptionStatus.ACTIVE, NOW.plusDays(1).toLocalDate(), NOW.plusDays(1).toLocalDate()))
+                .thenReturn(false);
 
         assertThatThrownBy(() -> service.book(new BookingRequest(1L, 10L, null)))
                 .isInstanceOf(BusinessRuleException.class);
