@@ -5,7 +5,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 /** HTTP-клиент catalog-service. */
-@FeignClient(name = "catalog-service", contextId = "catalogClient")
+@FeignClient(name = "catalog-service", contextId = "catalogClient",
+        fallbackFactory = CatalogClientFallbackFactory.class)
 public interface CatalogClient {
 
     @GetMapping("/api/classes/{id}")
