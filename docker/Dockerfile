@@ -15,6 +15,10 @@ WORKDIR /app
 
 RUN addgroup -S spring && adduser -S spring -G spring
 COPY --from=build /workspace/${MODULE}/target/*.jar app.jar
+# Лимит памяти JVM берётся из ограничений контейнера; при нехватке памяти процесс завершается
+# и контейнер перезапускается, а не «зависает»
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
+
 USER spring
 
 EXPOSE 8080
