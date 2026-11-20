@@ -1,10 +1,48 @@
-# Общие настройки для всех сервисов (Config Server отдаёт этот файл каждому клиенту)
+# Общие настройки для ВСЕХ клиентов Config Server.
+# ${...} подставляются на стороне клиента из его переменных среды.
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  info:
+    env:
+      enabled: true
+
 spring:
   cloud:
     openfeign:
+      circuitbreaker:
+        enabled: true            # каждый Feign-клиент оборачивается в Resilience4j Circuit Breaker
       client:
         config:
           default:
-            connectTimeout: 2000   # мс на установку соединения
-            readTimeout: 5000      # мс на ожидание ответа
+            connectTimeout: 1000   # мс на установку соединения
+            readTimeout: 2000      # мс на ожидание ответа
             loggerLevel: basic
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10                 # окно из последних 10 вызовов
+        minimumNumberOfCalls: 5               # раньше 5 вызовов процент сбоев не считается
+        failureRateThreshold: 50              # >= 50% сбоев в окне — цепь размыкается
+        waitDurationInOpenState: 10s          # столько цепь остаётся разомкнутой
+        permittedNumberOfCallsInHalfOpenState: 3   # пробные вызовы в полуоткрытом состоянии
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        ignoreExceptions:                     # ответы 4xx (404, 409...) — не сбой сервиса
+          - feign.FeignException$FeignClientException
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 5s                   # общий бюджет на вызов, включая повтор
+        cancelRunningFuture: true
