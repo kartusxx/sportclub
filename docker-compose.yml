@@ -15,7 +15,11 @@ services:
       retries: 10
 
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        MODULE: monolith
     container_name: sportclub-app
     depends_on:
       db:

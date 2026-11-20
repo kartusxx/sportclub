@@ -1,20 +1,20 @@
 # ---- build stage ----
 FROM maven:3.9-eclipse-temurin-21 AS build
+ARG MODULE
 WORKDIR /workspace
 
-# Сначала зависимости приложения — слой кэшируется, пока не изменился pom.xml
-COPY pom.xml .
-RUN mvn -B -q dependency:resolve -DincludeScope=test
-
-COPY src ./src
-RUN mvn -B -q -DskipTests package
+COPY . .
+# -pl собирает один модуль, -am — родительский pom и зависимые модули; кэш ~/.m2 живёт между сборками
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -q -DskipTests -pl ${MODULE} -am package
 
 # ---- runtime stage ----
 FROM eclipse-temurin:21-jre-alpine
+ARG MODULE
 WORKDIR /app
 
 RUN addgroup -S spring && adduser -S spring -G spring
-COPY --from=build /workspace/target/*.jar app.jar
+COPY --from=build /workspace/${MODULE}/target/*.jar app.jar
 USER spring
 
 EXPOSE 8080
