@@ -3,9 +3,6 @@ package ru.teamname.sportclub.booking.repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import ru.teamname.sportclub.booking.entity.Booking;
 import ru.teamname.sportclub.booking.enums.BookingStatus;
 
@@ -22,7 +19,5 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     boolean existsByMemberId(Long memberId);
 
     /** Удаляет все записи занятия одним запросом (используется при удалении занятия в catalog-service). */
-    @Modifying
-    @Query("delete from Booking b where b.classId = :classId")
-    int deleteAllByClassId(@Param("classId") Long classId);
+    long deleteAllByClassId(Long classId);
 }

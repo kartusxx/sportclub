@@ -49,8 +49,9 @@ public class SubscriptionController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Получить абонемент по id")
-    public Mono<SubscriptionResponse> findById(@PathVariable Long id) {
-        return Blocking.call(() -> subscriptionService.findById(id));
+    public Mono<ResponseEntity<SubscriptionResponse>> findById(@PathVariable Long id) {
+        return Blocking.call(() -> subscriptionService.findById(id))
+                .map(Responses::ok);
     }
 
     @PostMapping
@@ -64,8 +65,9 @@ public class SubscriptionController {
 
     @PostMapping("/{id}/cancel")
     @Operation(summary = "Отменить действующий абонемент")
-    public Mono<SubscriptionResponse> cancel(@PathVariable Long id) {
-        return Blocking.call(() -> subscriptionService.cancel(id));
+    public Mono<ResponseEntity<SubscriptionResponse>> cancel(@PathVariable Long id) {
+        return Blocking.call(() -> subscriptionService.cancel(id))
+                .map(Responses::ok);
     }
 
     @DeleteMapping("/{id}")

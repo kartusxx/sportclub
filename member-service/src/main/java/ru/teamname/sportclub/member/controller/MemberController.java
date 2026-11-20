@@ -54,8 +54,9 @@ public class MemberController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Получить участника по id")
-    public Mono<MemberResponse> findById(@PathVariable Long id) {
-        return Blocking.call(() -> memberService.findById(id));
+    public Mono<ResponseEntity<MemberResponse>> findById(@PathVariable Long id) {
+        return Blocking.call(() -> memberService.findById(id))
+                .map(Responses::ok);
     }
 
     @GetMapping("/{id}/subscriptions")
@@ -80,8 +81,9 @@ public class MemberController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Обновить участника")
-    public Mono<MemberResponse> update(@PathVariable Long id, @Valid @RequestBody MemberRequest request) {
-        return Blocking.call(() -> memberService.update(id, request));
+    public Mono<ResponseEntity<MemberResponse>> update(@PathVariable Long id, @Valid @RequestBody MemberRequest request) {
+        return Blocking.call(() -> memberService.update(id, request))
+                .map(Responses::ok);
     }
 
     @DeleteMapping("/{id}")

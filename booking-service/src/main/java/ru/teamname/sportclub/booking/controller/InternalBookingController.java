@@ -26,14 +26,14 @@ public class InternalBookingController {
 
     /** Сколько активных записей на занятии (для проверки вместимости при изменении занятия). */
     @GetMapping("/class/{classId}/booked-count")
-    public CountResponse bookedCount(@PathVariable Long classId) {
-        return new CountResponse(bookingService.countBooked(classId));
+    public ResponseEntity<CountResponse> bookedCount(@PathVariable Long classId) {
+        return ResponseEntity.ok(new CountResponse(bookingService.countBooked(classId)));
     }
 
     /** Есть ли у участника хоть одна запись (для запрета удаления участника). */
     @GetMapping("/member/{memberId}/exists")
-    public ExistsResponse memberHasBookings(@PathVariable Long memberId) {
-        return new ExistsResponse(bookingService.hasBookings(memberId));
+    public ResponseEntity<ExistsResponse> memberHasBookings(@PathVariable Long memberId) {
+        return ResponseEntity.ok(new ExistsResponse(bookingService.hasBookings(memberId)));
     }
 
     /** Удаляет все записи занятия; идемпотентно: повторный вызов ничего не удалит и вернёт 204. */

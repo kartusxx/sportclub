@@ -13,7 +13,11 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import ru.teamname.sportclub.member.client.BookingGateway;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Properties;
 import java.util.UUID;
 
 /**
@@ -32,10 +36,29 @@ import java.util.UUID;
 })
 public abstract class AbstractIntegrationTest {
 
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17-alpine");
+    /** Версия образа, имя БД, пользователь и пароль лежат в src/test/resources/test-database.properties. */
+    private static final Properties DATABASE = loadDatabaseProperties();
+
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer(DATABASE.getProperty("test.postgres.image"))
+            .withDatabaseName(DATABASE.getProperty("test.postgres.database"))
+            .withUsername(DATABASE.getProperty("test.postgres.username"))
+            .withPassword(DATABASE.getProperty("test.postgres.password"));
 
     static {
         POSTGRES.start();
+    }
+
+    private static Properties loadDatabaseProperties() {
+        try (InputStream in = AbstractIntegrationTest.class.getResourceAsStream("/test-database.properties")) {
+            if (in == null) {
+                throw new IllegalStateException("Не найден src/test/resources/test-database.properties");
+            }
+            Properties properties = new Properties();
+            properties.load(in);
+            return properties;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     @DynamicPropertySource

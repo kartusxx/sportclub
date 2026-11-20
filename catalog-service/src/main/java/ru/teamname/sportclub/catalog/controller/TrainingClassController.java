@@ -39,17 +39,19 @@ public class TrainingClassController {
     @Operation(summary = "Лента занятий (бесконечная прокрутка)",
             description = "Пагинация: page, size (максимум 50), sort=поле[,asc|desc]. Общее количество "
                     + "не считается: клиент ориентируется по полю hasNext")
-    public Mono<SliceResponse<TrainingClassResponse>> findFeed(
+    public Mono<ResponseEntity<SliceResponse<TrainingClassResponse>>> findFeed(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String sort) {
-        return classService.findFeed(PageQuery.of(page, size, sort, "startsAt", SORTABLE));
+        return classService.findFeed(PageQuery.of(page, size, sort, "startsAt", SORTABLE))
+                .map(Responses::ok);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Получить занятие по id")
-    public Mono<TrainingClassResponse> findById(@PathVariable Long id) {
-        return classService.findById(id);
+    public Mono<ResponseEntity<TrainingClassResponse>> findById(@PathVariable Long id) {
+        return classService.findById(id)
+                .map(Responses::ok);
     }
 
     @PostMapping
@@ -61,9 +63,10 @@ public class TrainingClassController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Обновить занятие")
-    public Mono<TrainingClassResponse> update(@PathVariable Long id,
+    public Mono<ResponseEntity<TrainingClassResponse>> update(@PathVariable Long id,
                                               @Valid @RequestBody TrainingClassRequest request) {
-        return classService.update(id, request);
+        return classService.update(id, request)
+                .map(Responses::ok);
     }
 
     @DeleteMapping("/{id}")

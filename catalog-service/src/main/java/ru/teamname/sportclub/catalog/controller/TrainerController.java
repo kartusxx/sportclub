@@ -49,8 +49,9 @@ public class TrainerController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Получить тренера по id")
-    public Mono<TrainerResponse> findById(@PathVariable Long id) {
-        return trainerService.findById(id);
+    public Mono<ResponseEntity<TrainerResponse>> findById(@PathVariable Long id) {
+        return trainerService.findById(id)
+                .map(Responses::ok);
     }
 
     @PostMapping
@@ -63,8 +64,9 @@ public class TrainerController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Обновить тренера и список его направлений (транзакция)")
-    public Mono<TrainerResponse> update(@PathVariable Long id, @Valid @RequestBody TrainerRequest request) {
-        return trainerService.update(id, request);
+    public Mono<ResponseEntity<TrainerResponse>> update(@PathVariable Long id, @Valid @RequestBody TrainerRequest request) {
+        return trainerService.update(id, request)
+                .map(Responses::ok);
     }
 
     @DeleteMapping("/{id}")
