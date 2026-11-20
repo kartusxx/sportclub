@@ -3,3 +3,14 @@ server:
 
 info:
   service: catalog-service
+
+spring:
+  r2dbc:
+    url: ${R2DBC_URL:r2dbc:postgresql://localhost:5434/catalog_db}
+    username: ${DB_USERNAME:catalog}
+    password: ${DB_PASSWORD:catalog}
+  flyway:
+    # Flyway работает только через JDBC, поэтому ему нужен отдельный JDBC-адрес той же БД
+    url: ${DB_URL:jdbc:postgresql://localhost:5434/catalog_db}
+    user: ${DB_USERNAME:catalog}
+    password: ${DB_PASSWORD:catalog}

@@ -1,3 +1,11 @@
+x-postgres: &postgres
+  image: postgres:17-alpine
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+    interval: 5s
+    timeout: 5s
+    retries: 10
+
 x-client-env: &client-env
   CONFIG_URL: http://config-server:8888
   EUREKA_URL: http://discovery-server:8761/eureka/
@@ -41,6 +49,42 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-sportclub}
     ports:
       - "${APP_PORT:-8080}:8080"
+
+  member-db:
+    <<: *postgres
+    container_name: sportclub-member-db
+    environment:
+      POSTGRES_DB: member_db
+      POSTGRES_USER: member
+      POSTGRES_PASSWORD: ${MEMBER_DB_PASSWORD:-member}
+    volumes:
+      - member-db-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+
+  catalog-db:
+    <<: *postgres
+    container_name: sportclub-catalog-db
+    environment:
+      POSTGRES_DB: catalog_db
+      POSTGRES_USER: catalog
+      POSTGRES_PASSWORD: ${CATALOG_DB_PASSWORD:-catalog}
+    volumes:
+      - catalog-db-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5434:5432"
+
+  booking-db:
+    <<: *postgres
+    container_name: sportclub-booking-db
+    environment:
+      POSTGRES_DB: booking_db
+      POSTGRES_USER: booking
+      POSTGRES_PASSWORD: ${BOOKING_DB_PASSWORD:-booking}
+    volumes:
+      - booking-db-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5435:5432"
 
   config-server:
     build:
@@ -88,8 +132,15 @@ services:
       args:
         MODULE: member-service
     container_name: sportclub-member-service
-    environment: *client-env
-    depends_on: *client-depends
+    environment:
+      <<: *client-env
+      DB_URL: jdbc:postgresql://member-db:5432/member_db
+      DB_USERNAME: member
+      DB_PASSWORD: ${MEMBER_DB_PASSWORD:-member}
+    depends_on:
+      <<: *client-depends
+      member-db:
+        condition: service_healthy
 
   catalog-service:
     build:
@@ -98,8 +149,16 @@ services:
       args:
         MODULE: catalog-service
     container_name: sportclub-catalog-service
-    environment: *client-env
-    depends_on: *client-depends
+    environment:
+      <<: *client-env
+      R2DBC_URL: r2dbc:postgresql://catalog-db:5432/catalog_db
+      DB_URL: jdbc:postgresql://catalog-db:5432/catalog_db
+      DB_USERNAME: catalog
+      DB_PASSWORD: ${CATALOG_DB_PASSWORD:-catalog}
+    depends_on:
+      <<: *client-depends
+      catalog-db:
+        condition: service_healthy
 
   booking-service:
     build:
@@ -108,8 +167,15 @@ services:
       args:
         MODULE: booking-service
     container_name: sportclub-booking-service
-    environment: *client-env
-    depends_on: *client-depends
+    environment:
+      <<: *client-env
+      DB_URL: jdbc:postgresql://booking-db:5432/booking_db
+      DB_USERNAME: booking
+      DB_PASSWORD: ${BOOKING_DB_PASSWORD:-booking}
+    depends_on:
+      <<: *client-depends
+      booking-db:
+        condition: service_healthy
 
   api-gateway:
     build:
@@ -125,3 +191,6 @@ services:
 
 volumes:
   sportclub-db-data:
+  member-db-data:
+  catalog-db-data:
+  booking-db-data:
