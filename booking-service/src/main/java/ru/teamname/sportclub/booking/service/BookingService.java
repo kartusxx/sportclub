@@ -41,9 +41,9 @@ public class BookingService {
         return bookingRepository.findAll(pageable).map(BookingMapper::toResponse);
     }
 
-    /** TODO(шаг 5): вернуть проверку существования занятия через catalog-service (404 для неизвестного id). */
-    @Transactional(readOnly = true)
+    /** Сначала проверяется, что занятие существует (404 для неизвестного id), затем читаются записи. */
     public Page<BookingResponse> findByClass(Long classId, Pageable pageable) {
+        classDirectory.getClassInfo(classId);
         return bookingRepository.findByClassId(classId, pageable).map(BookingMapper::toResponse);
     }
 
@@ -150,6 +150,24 @@ public class BookingService {
     @Transactional
     public void delete(Long id) {
         bookingRepository.delete(getOrThrow(id));
+    }
+
+    /** Активные записи занятия: нужны catalog-service при уменьшении вместимости. */
+    @Transactional(readOnly = true)
+    public long countBooked(Long classId) {
+        return bookingRepository.countByClassIdAndStatus(classId, BookingStatus.BOOKED);
+    }
+
+    /** Есть ли у участника записи (в любом статусе): нужно member-service при удалении участника. */
+    @Transactional(readOnly = true)
+    public boolean hasBookings(Long memberId) {
+        return bookingRepository.existsByMemberId(memberId);
+    }
+
+    /** Каскадное удаление записей занятия, когда занятие удалено в catalog-service. */
+    @Transactional
+    public void deleteByClass(Long classId) {
+        bookingRepository.deleteAllByClassId(classId);
     }
 
     private Booking getOrThrow(Long id) {
